@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "ProjetoEscoteiro",
+    "slug": "ProjetoEscoteiro",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/minhalogo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": false,
+      "package": "com.luizt.ProjetoEscoteiro"
+    },
+    "androidNavigationBar": {
+      "visible": "sticky-immersive"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "b90e904c-bb76-411a-88e1-7c21f6c1f270"
+      }
+    }
+  }
+}
