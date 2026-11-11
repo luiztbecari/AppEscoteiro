@@ -12,7 +12,7 @@ export default function Profile() {
   const [ramoNome, setRamoNome] = useState("Não Informado");
   const [cargoExibido, setCargoExibido] = useState("Chefe");
 
-  const BASE_URL = 'https://grupo-escoteiro.onrender.com';
+  const BASE_URL = 'https://grupo-escoteiro-ia-gefi-docker-teste.onrender.com';
 
   const state = navigation.getParent()?.getState();
   const routeParams = state?.routes?.find(r => r.name === 'HomeResponsavel' || r.name === 'HomeAdmin' || r.name === 'HomeChefe')?.params;

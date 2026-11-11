@@ -1,28 +1,26 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Modal, Platform, ActivityIndicator, ScrollView, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Modal, ActivityIndicator } from 'react-native';
 import { ThemeContext } from '../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const OURO_DETALHE = '#DAA520';
 const VERDE_SKILL = '#2E8B57';
-const MOSTRAR_BOTAO_ATIVIDADE = false;
 
 const calcularIdadeApartirDeData = (dataNascimento) => {
   if (!dataNascimento) return '--';
-  
+
   try {
     const dataNasc = new Date(dataNascimento);
     if (isNaN(dataNasc.getTime())) return '--';
-    
+
     const hoje = new Date();
     let idadeCalculada = hoje.getFullYear() - dataNasc.getFullYear();
     const diferencaMeses = hoje.getMonth() - dataNasc.getMonth();
-    
+
     if (diferencaMeses < 0 || (diferencaMeses === 0 && hoje.getDate() < dataNasc.getDate())) {
       idadeCalculada--;
     }
-    
+
     return idadeCalculada >= 0 ? idadeCalculada : '--';
   } catch (error) {
     console.error("Erro ao converter data de nascimento:", error);
@@ -48,38 +46,30 @@ export default function CreatePatrol({ route, navigation }) {
   const [membros, setMembros] = useState([]);
   const [listaJovens, setListaJovens] = useState([]);
   const [loadingJovens, setLoadingJovens] = useState(false);
-  const [loadingML, setLoadingML] = useState(false); 
-  const [loadingAtividade, setLoadingAtividade] = useState(false); 
-  const [saving, setSaving] = useState(false); 
-  
+  const [loadingML, setLoadingML] = useState(false);
+  const [saving, setSaving] = useState(false);
+
   const [modalVisible, setModalVisible] = useState(false);
   const [buscaJovem, setBuscaJovem] = useState('');
-  
+
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertMsg, setAlertMsg] = useState('');
   const [alertType, setAlertType] = useState('success');
 
-  const [modalAtividadeVisible, setModalAtividadeVisible] = useState(false);
-  const [atividadeRecomendada, setAtividadeRecomendada] = useState(null);
-
-  const BASE_URL = 'https://grupo-escoteiro.onrender.com';
-  const ML_URL = 'https://mlrender-8jl0.onrender.com'; 
+  const BASE_URL = 'https://grupo-escoteiro-ia-gefi-docker-teste.onrender.com';
 
   useEffect(() => {
     const inicializarTela = async () => {
       setNome('');
       setMembros([]);
-      
-      console.log("🔄 [PASSO 1] Buscando lista global de jovens...");
+
       const jovensCarregados = await carregarJovens();
-      
-      console.log(`📊 [PASSO 2] Total de jovens carregados: ${jovensCarregados?.length || 0}`);
 
       if (patrulhaEdit) {
         setNome(patrulhaEdit.name || patrulhaEdit.nome || '');
-        
+
         const membrosVindosDoServidor = patrulhaEdit.membros || patrulhaEdit.members || [];
-        
+
         const membrosCompletos = membrosVindosDoServidor.map((membro) => {
           if (typeof membro === 'object' && membro !== null) {
             return {
@@ -87,13 +77,13 @@ export default function CreatePatrol({ route, navigation }) {
               idade: calcularIdadeApartirDeData(membro.date_of_birth || membro.date_of_birthday)
             };
           }
-          
+
           const idMembroServidor = membro ? membro.toString().trim() : '';
           const jovemEncontrado = jovensCarregados.find(j => {
             const idJovemLista = (j.id || j._id || '').toString().trim();
             return idJovemLista === idMembroServidor;
           });
-          
+
           if (jovemEncontrado) {
             const dataNasc = jovemEncontrado.date_of_birth || jovemEncontrado.date_of_birthday;
             return {
@@ -105,7 +95,7 @@ export default function CreatePatrol({ route, navigation }) {
               skill_experiencia: jovemEncontrado.skill_experiencia
             };
           }
-          
+
           return { id: membro, name: `ID Não Localizado (${membro})`, idade: '--' };
         });
 
@@ -118,19 +108,19 @@ export default function CreatePatrol({ route, navigation }) {
     });
 
     return unsubscribe;
-  }, [navigation, patrulhaEdit]); 
+  }, [navigation, patrulhaEdit]);
 
   const carregarJovens = async () => {
     setLoadingJovens(true);
     try {
       const tokenChefe = await AsyncStorage.getItem('@token_chefe');
       const storageBranchId = await AsyncStorage.getItem('@branch_id');
-      
-      const rawBranchId = storageBranchId || 
-                          chefeLogado?.branch_id || 
-                          chefeLogado?.user?.branch_id || 
+
+      const rawBranchId = storageBranchId ||
+                          chefeLogado?.branch_id ||
+                          chefeLogado?.user?.branch_id ||
                           patrulhaEdit?.branch_id;
-      
+
       const response = await fetch(`${BASE_URL}/members`, {
         method: 'GET',
         headers: {
@@ -144,20 +134,12 @@ export default function CreatePatrol({ route, navigation }) {
         setListaJovens([]);
         return [];
       }
-      
+
       const data = await response.json();
       const listaCompleta = Array.isArray(data) ? data : (data.members || data.data || []);
-      
+
       if (rawBranchId !== undefined && rawBranchId !== null) {
         const branchIdStr = rawBranchId.toString().trim();
-        
-        console.log("=========================================");
-        console.log(`👤 Chefe Logado no Ramo ID: "${branchIdStr}"`);
-        console.log("📋 Amostra de jovens vindos do banco de dados:");
-        listaCompleta.slice(0, 3).forEach((j, i) => {
-          console.log(`   [Jovem ${i+1}] Nome: ${j.nome || j.name} | branch_id do banco: ${j.branch_id} | branch_name do banco: "${j.branch_name}"`);
-        });
-        console.log("=========================================");
 
         let termosDoRamo = [];
         if (branchIdStr === "1") {
@@ -179,20 +161,19 @@ export default function CreatePatrol({ route, navigation }) {
           if (jovemBranchId && jovemBranchId === branchIdStr) {
             return true;
           }
-          
+
           if (nomeJovemRamoNoBanco && termosDoRamo.length > 0) {
             return termosDoRamo.some(termo => nomeJovemRamoNoBanco.includes(termo));
           }
-          
+
           return false;
         });
 
         const listaNormalizada = listaFiltrada.map(jovem => ({
           ...jovem,
-          branch_id: branchIdStr 
+          branch_id: branchIdStr
         }));
 
-        console.log(`🎯 Filtro aplicado para Ramo ${branchIdStr}: Retornou ${listaNormalizada.length} membros.`);
         setListaJovens(listaNormalizada);
         return listaNormalizada;
       }
@@ -201,7 +182,7 @@ export default function CreatePatrol({ route, navigation }) {
       return listaCompleta;
 
     } catch (error) {
-      console.error("⚠️ Erro de rede ao buscar jovens:", error);
+      console.error("Erro de rede ao buscar jovens:", error);
       setListaJovens([]);
       return [];
     } finally {
@@ -215,200 +196,149 @@ export default function CreatePatrol({ route, navigation }) {
     setAlertVisible(true);
   };
 
+  // Só os jovens que ainda não estão em nenhuma patrulha entram no balanceamento
+  const obterJovensSemPatrulha = () =>
+    (listaJovens || []).filter(lj => !lj.patrol_id && !lj.patrulha_id);
+
   const confirmarBalanceamento = () => {
-    if (!listaJovens || listaJovens.length === 0) {
-      showCustomAlert("Não há dados de jovens carregados para submeter ao modelo de ML.", 'error');
+    if (obterJovensSemPatrulha().length === 0) {
+      showCustomAlert("Não há jovens sem patrulha para balancear.", 'error');
       return;
     }
     showCustomAlert("Esta é uma sugestão inteligente de balanceamento para equilibrar as equipes com base nas habilidades dos jovens. Deseja balancear a patrulha agora?", 'ml');
   };
 
   const confirmarSalvamento = () => {
-    if (!nome.trim()) { 
-      showCustomAlert('Por favor, dê um nome à patrulha.', 'error'); 
-      return; 
+    if (!nome.trim()) {
+      showCustomAlert('Por favor, dê um nome à patrulha.', 'error');
+      return;
     }
     showCustomAlert(isEditing ? "Deseja salvar as alterações desta patrulha?" : "Deseja criar esta nova patrulha?", 'save');
   };
 
-// Troque a função handleCallMLBalancer do CreatePatrol.js por esta
-const handleCallMLBalancer = async () => {
-  setLoadingML(true);
+  const handleCallMLBalancer = async () => {
+    setLoadingML(true);
 
-  // cancela se o servidor demorar mais de 90 segundos
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 90000);
+    // cancela se o servidor demorar mais de 90 segundos (o Render pode demorar para acordar)
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 90000);
 
-  try {
-    const tokenChefe = await AsyncStorage.getItem('@token_chefe');
-    const storageBranchId = await AsyncStorage.getItem('@branch_id');
-    const rawBranchId = storageBranchId || chefeLogado?.branch_id || chefeLogado?.user?.branch_id;
-    const branchIdAtual = rawBranchId ? rawBranchId.toString().trim() : null;
-
-    if (!branchIdAtual) {
-      showCustomAlert("Não foi possível identificar o ramo.", 'error');
-      return;
-    }
-
-    const jovensSemPatrulha = listaJovens?.filter(lj => !lj.patrol_id && !lj.patrulha_id) || [];
-    const totalJovensValidos = jovensSemPatrulha.length > 0 ? jovensSemPatrulha.length : (listaJovens?.length || 0);
-    const qtdGruposCalculada = Math.max(1, Math.ceil(totalJovensValidos / 8));
-
-    const response = await fetch(`${BASE_URL}/patrols/balancear`, {
-      method: 'POST',
-      signal: controller.signal,
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${tokenChefe}`
-      },
-      body: JSON.stringify({
-        branch_id: branchIdAtual,
-        quantidade_grupos: qtdGruposCalculada
-      })
-    });
-
-    const textData = await response.text();
-
-    if (!response.ok) {
-      let mensagem = `Erro ${response.status}`;
-      try {
-        const errorObj = JSON.parse(textData);
-        mensagem = errorObj.error || errorObj.message || mensagem;
-        if (errorObj.details) {
-          mensagem += ` (${typeof errorObj.details === 'string' ? errorObj.details : JSON.stringify(errorObj.details)})`;
-        }
-      } catch {
-        if (textData) mensagem = `Erro ${response.status}: ${textData}`;
-      }
-      throw new Error(mensagem);
-    }
-
-    const data = JSON.parse(textData);
-    console.log("Dados do servidor:", JSON.stringify(data, null, 2));
-
-    let jovensSugeridos = [];
-    if (Array.isArray(data.resultado)) {
-      jovensSugeridos = data.resultado;
-    } else if (data.resultado && Array.isArray(data.resultado.membros)) {
-      jovensSugeridos = data.resultado.membros;
-    } else if (Array.isArray(data.membros)) {
-      jovensSugeridos = data.membros;
-    }
-
-    if (jovensSugeridos.length === 0) {
-      throw new Error("O servidor retornou sucesso, mas a lista de membros está vazia.");
-    }
-
-    // Se vier em grupos, usa só o primeiro grupo; se vier lista simples, usa até 8
-    let membrosDaPatrulha = [];
-    if (jovensSugeridos[0] && Array.isArray(jovensSugeridos[0].membros)) {
-      membrosDaPatrulha = jovensSugeridos[0].membros;
-    } else {
-      membrosDaPatrulha = jovensSugeridos.slice(0, 8);
-    }
-
-    const patrulhaMontadaPelaIA = membrosDaPatrulha.slice(0, 8).map(jovemIA => {
-      const idOriginal = String(jovemIA.id || jovemIA._id).trim();
-
-      const correspondenteLocal = listaJovens.find(lj =>
-        String(lj.id || lj._id).trim() === idOriginal
-      );
-
-      return {
-        id: idOriginal,
-        name: correspondenteLocal?.nome || correspondenteLocal?.name || jovemIA.name || "Jovem",
-        idade: correspondenteLocal ? calcularIdadeApartirDeData(correspondenteLocal.date_of_birth || correspondenteLocal.date_of_birthday) : '--',
-        skill_fisico: jovemIA.skill_fisico ?? jovemIA.fisico ?? correspondenteLocal?.skill_fisico ?? 1,
-        skill_tecnico: jovemIA.skill_tecnico ?? jovemIA.tecnico ?? correspondenteLocal?.skill_tecnico ?? 1,
-        skill_experiencia: jovemIA.skill_experiencia ?? jovemIA.experiencia ?? correspondenteLocal?.skill_experiencia ?? 1
-      };
-    });
-
-    setMembros(patrulhaMontadaPelaIA);
-    showCustomAlert(`Sucesso! Patrulha otimizada com ${patrulhaMontadaPelaIA.length} membros.`, 'success');
-
-  } catch (error) {
-    console.error("[ML ERROR]:", error);
-    if (error.name === 'AbortError') {
-      showCustomAlert("O servidor demorou demais para responder. Tente novamente em 1 minuto.", 'error');
-    } else {
-      showCustomAlert(error.message, 'error');
-    }
-  } finally {
-    clearTimeout(timer);
-    setLoadingML(false);
-  }
-};
-
-  const handleRecomendarAtividade = async () => {
-    if (!membros || membros.length === 0) {
-      showCustomAlert("Por favor, adicione pelo menos um membro na patrulha para gerar uma recomendação.", 'error');
-      return;
-    }
-
-    setLoadingAtividade(true);
     try {
+      const tokenChefe = await AsyncStorage.getItem('@token_chefe');
       const storageBranchId = await AsyncStorage.getItem('@branch_id');
       const rawBranchId = storageBranchId || chefeLogado?.branch_id || chefeLogado?.user?.branch_id;
-      const branchIdAtual = rawBranchId ? rawBranchId.toString().trim() : "Geral";
+      const branchIdAtual = rawBranchId ? rawBranchId.toString().trim() : null;
 
-      let nomeRamo = "Geral";
-      if (branchIdAtual === "1") nomeRamo = "Escoteiro";
-      else if (branchIdAtual === "2") nomeRamo = "Lobinho";
-      else if (branchIdAtual === "3") nomeRamo = "Sênior";
-      else if (branchIdAtual === "4") nomeRamo = "Pioneiro";
+      if (!branchIdAtual) {
+        showCustomAlert("Não foi possível identificar o ramo.", 'error');
+        return;
+      }
 
-      const payloadAtividade = {
-        membros: membros.map(m => ({
-          id: m.id || m._id,
-          nome: m.name || m.nome || "Membro",
-          skill_fisico: Number(m.skill_fisico) || 1,
-          skill_tecnico: Number(m.skill_tecnico) || 1,
-          skill_experiencia: Number(m.skill_experiencia) || 1,
-          ramo: nomeRamo 
-        })),
-        limite_por_grupo: 8
-      };
+      const jovensSemPatrulha = obterJovensSemPatrulha();
+      if (jovensSemPatrulha.length === 0) {
+        showCustomAlert("Não há jovens sem patrulha para balancear.", 'error');
+        return;
+      }
+      const qtdGruposCalculada = Math.max(1, Math.ceil(jovensSemPatrulha.length / 8));
 
-      console.log("🚀 Enviando dados para geração de atividades com IA...");
-
-      const response = await fetch(`${ML_URL}/atividades`, {
+      const response = await fetch(`${BASE_URL}/patrols/balancear`, {
         method: 'POST',
-        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-        body: JSON.stringify(payloadAtividade) 
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${tokenChefe}`
+        },
+        body: JSON.stringify({
+          branch_id: branchIdAtual,
+          quantidade_grupos: qtdGruposCalculada
+        })
       });
 
+      const textData = await response.text();
+
       if (!response.ok) {
-        const txtErro = await response.text();
-        throw new Error(`Status ${response.status} - ${txtErro}`);
+        let mensagem = `Erro ${response.status}`;
+        try {
+          const errorObj = JSON.parse(textData);
+          mensagem = errorObj.error || errorObj.message || mensagem;
+          if (errorObj.details) {
+            mensagem += ` (${typeof errorObj.details === 'string' ? errorObj.details : JSON.stringify(errorObj.details)})`;
+          }
+        } catch {
+          if (textData) mensagem = `Erro ${response.status}: ${textData}`;
+        }
+        throw new Error(mensagem);
       }
 
-      const dataAtividade = await response.json();
-      console.log("🎯 Resposta da IA recebida:", dataAtividade);
+      const data = JSON.parse(textData);
 
-      if (dataAtividade.grupos && dataAtividade.grupos.length > 0) {
-        const primeiroGrupoIA = dataAtividade.grupos[0];
-        const primeiraAtividade = primeiroGrupoIA.atividades[0];
-
-        setAtividadeRecomendada({
-          nome: primeiraAtividade?.nome || 'Atividade Sugerida',
-          ramo: primeiroGrupoIA.perfil_do_grupo || nomeRamo,
-          descricao: `Objetivo: ${primeiraAtividade?.objetivo}\n\nDuração: ${primeiraAtividade?.duracao}\n\nComo Executar:\n${primeiraAtividade?.como_executar?.join('\n')}`
-        });
-        
-        setModalAtividadeVisible(true);
-      } else if (dataAtividade.erro) {
-        throw new Error(dataAtividade.erro);
-      } else {
-        throw new Error("Formato de resposta inesperado da IA.");
+      // Aceita os formatos: { grupos: [...] }, [ { membros: [...] } ], { membros: [...] } ou lista simples de jovens
+      const resultado = data.resultado ?? data;
+      let grupos = [];
+      if (Array.isArray(resultado)) {
+        grupos = resultado;
+      } else if (Array.isArray(resultado?.grupos)) {
+        grupos = resultado.grupos;
+      } else if (Array.isArray(resultado?.membros)) {
+        grupos = resultado.membros;
       }
+
+      if (grupos.length === 0) {
+        throw new Error("O servidor não retornou grupos válidos.");
+      }
+
+      // Se veio em grupos, usa o primeiro que tenha integrantes; se veio lista simples, usa a própria lista
+      const primeiroGrupoComMembros = grupos.find(g => Array.isArray(g?.membros) && g.membros.length > 0);
+      const algumGrupo = grupos.some(g => Array.isArray(g?.membros));
+
+      let membrosDaPatrulha = [];
+      if (primeiroGrupoComMembros) {
+        membrosDaPatrulha = primeiroGrupoComMembros.membros;
+      } else if (!algumGrupo) {
+        membrosDaPatrulha = grupos;
+      }
+
+      membrosDaPatrulha = membrosDaPatrulha.slice(0, 8);
+
+      if (membrosDaPatrulha.length === 0) {
+        throw new Error("O grupo sugerido não contém integrantes.");
+      }
+
+      const patrulhaMontadaPelaIA = membrosDaPatrulha.map(jovemIA => {
+        // o ML pode devolver o objeto do jovem ou só o id
+        const idIA = (typeof jovemIA === 'object' && jovemIA !== null) ? (jovemIA.id || jovemIA._id) : jovemIA;
+        const idOriginal = String(idIA).trim();
+
+        const correspondenteLocal = listaJovens.find(lj =>
+          String(lj.id || lj._id).trim() === idOriginal
+        );
+
+        const dadosIA = (typeof jovemIA === 'object' && jovemIA !== null) ? jovemIA : {};
+
+        return {
+          id: correspondenteLocal?.id ?? correspondenteLocal?._id ?? idIA,
+          name: correspondenteLocal?.nome || correspondenteLocal?.name || dadosIA.name || "Jovem",
+          idade: correspondenteLocal ? calcularIdadeApartirDeData(correspondenteLocal.date_of_birth || correspondenteLocal.date_of_birthday) : '--',
+          skill_fisico: dadosIA.skill_fisico ?? dadosIA.fisico ?? correspondenteLocal?.skill_fisico ?? 1,
+          skill_tecnico: dadosIA.skill_tecnico ?? dadosIA.tecnico ?? correspondenteLocal?.skill_tecnico ?? 1,
+          skill_experiencia: dadosIA.skill_experiencia ?? dadosIA.experiencia ?? correspondenteLocal?.skill_experiencia ?? 1
+        };
+      });
+
+      setMembros(patrulhaMontadaPelaIA);
+      showCustomAlert(`Sucesso! Patrulha otimizada com ${patrulhaMontadaPelaIA.length} membros.`, 'success');
 
     } catch (error) {
-      console.error("❌ [ML ACTIVITY ERROR]:", error);
-      showCustomAlert(`Não foi possível buscar a recomendação: ${error.message}`, 'error');
+      console.error("[ML ERROR]:", error);
+      if (error.name === 'AbortError') {
+        showCustomAlert("O servidor demorou demais para responder. Tente novamente em 1 minuto.", 'error');
+      } else {
+        showCustomAlert(error.message, 'error');
+      }
     } finally {
-      setLoadingAtividade(false);
+      clearTimeout(timer);
+      setLoadingML(false);
     }
   };
 
@@ -417,22 +347,26 @@ const handleCallMLBalancer = async () => {
       showCustomAlert("Limite de 8 membros atingido por patrulha.", 'error');
       return;
     }
-    
+
     const idJovem = jovem.id || jovem._id;
-    const nomeJovem = jovem.nome || jovem.name; 
+    const nomeJovem = jovem.nome || jovem.name;
     const dataNascimentoDoBanco = jovem.date_of_birth || jovem.date_of_birthday;
     const idadeJovem = calcularIdadeApartirDeData(dataNascimentoDoBanco);
 
-    const jaExiste = membros.some(m => (typeof m === 'object' && m !== null) ? (m.id || m._id) === idJovem : m === idJovem);
+    // compara como texto, porque o id pode vir como número ou como string
+    const jaExiste = membros.some(m => {
+      const idMembro = (typeof m === 'object' && m !== null) ? (m.id || m._id) : m;
+      return String(idMembro) === String(idJovem);
+    });
 
     if (jaExiste) {
       showCustomAlert("Este jovem já foi adicionado a esta patrulha.", 'error');
       return;
     }
-    
-    setMembros(membrosAtuais => [...membrosAtuais, { 
-      id: idJovem, 
-      name: nomeJovem, 
+
+    setMembros(membrosAtuais => [...membrosAtuais, {
+      id: idJovem,
+      name: nomeJovem,
       idade: idadeJovem,
       skill_fisico: jovem.skill_fisico,
       skill_tecnico: jovem.skill_tecnico,
@@ -447,7 +381,7 @@ const handleCallMLBalancer = async () => {
       const idPatrulha = patrulhaEdit?.id || patrulhaEdit?._id;
 
       if (!idPatrulha) throw new Error("ID da patrulha não encontrado.");
-      
+
       const response = await fetch(`${BASE_URL}/patrols/${idPatrulha}`, {
         method: 'DELETE',
         headers: { 'Accept': 'application/json', 'Authorization': `Bearer ${tokenChefe}` }
@@ -497,7 +431,7 @@ const handleCallMLBalancer = async () => {
 
       const payload = {
         name: nome,
-        branch_id: branchId, 
+        branch_id: branchId,
         membros: membrosIds,
         members: membrosIds,
         status: patrulhaEdit?.status || (membrosIds.length > 0 ? 'ativa' : 'desativada')
@@ -505,22 +439,22 @@ const handleCallMLBalancer = async () => {
 
       const response = await fetch(url, {
         method: isEditing ? 'PUT' : 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
           'Authorization': `Bearer ${tokenChefe}`
         },
         body: JSON.stringify(payload),
       });
-      
+
       if (response.ok) {
         navigation.goBack();
       } else {
         const textoErro = await response.text();
         throw new Error(textoErro || `Erro ${response.status}`);
       }
-    } catch (error) { 
-      showCustomAlert(`Erro ao salvar: ${error.message}`, 'error'); 
+    } catch (error) {
+      showCustomAlert(`Erro ao salvar: ${error.message}`, 'error');
     } finally {
       setSaving(false);
     }
@@ -598,15 +532,15 @@ const handleCallMLBalancer = async () => {
           placeholder="Ex: Patrulha Touro"
           placeholderTextColor={colors.border}
         />
-        
+
         {isEditing && patrulhaEdit?.status && (
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-            <View style={{ 
-              width: 10, 
-              height: 10, 
-              borderRadius: 5, 
+            <View style={{
+              width: 10,
+              height: 10,
+              borderRadius: 5,
               backgroundColor: patrulhaEdit.status === 'ativa' ? '#4CD964' : '#FF3B30',
-              marginRight: 6 
+              marginRight: 6
             }} />
             <Text style={{ color: colors.text, fontSize: 13, textTransform: 'capitalize' }}>
               Patrulha {patrulhaEdit.status}
@@ -617,9 +551,9 @@ const handleCallMLBalancer = async () => {
         <View style={styles.headerMembros}>
           <Text style={[styles.label, { color: colors.text }]}>Membros ({membros?.length || 0}/8)</Text>
           <View style={{ flexDirection: 'row' }}>
-            
-            <TouchableOpacity 
-              onPress={confirmarBalanceamento} 
+
+            <TouchableOpacity
+              onPress={confirmarBalanceamento}
               disabled={loadingML}
               style={[styles.btnBalancear, { borderColor: colors.primary, marginRight: 10 }]}
             >
@@ -667,26 +601,9 @@ const handleCallMLBalancer = async () => {
       />
 
       <View style={styles.stickyFooter}>
-        {MOSTRAR_BOTAO_ATIVIDADE && (
-          <TouchableOpacity 
-            style={[styles.btnAtividade, { borderColor: OURO_DETALHE, marginBottom: 12 }]} 
-            onPress={handleRecomendarAtividade}
-            disabled={loadingAtividade}
-          >
-            {loadingAtividade ? (
-              <ActivityIndicator size="small" color={OURO_DETALHE} />
-            ) : (
-              <>
-                <Ionicons name="sparkles" size={20} color={OURO_DETALHE} style={{ marginRight: 8 }} />
-                <Text style={[styles.btnAtividadeText, { color: OURO_DETALHE }]}>SUGERIR ATIVIDADE DA IA</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        )}
-
-        <TouchableOpacity 
-          style={[styles.btnSave, { backgroundColor: colors.primary }]} 
-          onPress={confirmarSalvamento} 
+        <TouchableOpacity
+          style={[styles.btnSave, { backgroundColor: colors.primary }]}
+          onPress={confirmarSalvamento}
           disabled={saving}
         >
           {saving ? (
@@ -697,7 +614,7 @@ const handleCallMLBalancer = async () => {
         </TouchableOpacity>
       </View>
 
-      {/* Modal de seleção de jovens — redesenhado com busca, avatares e cabeçalho fixo */}
+      {/* Modal de seleção de jovens */}
       <Modal visible={modalVisible} animationType="fade" transparent={true} onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
@@ -737,7 +654,7 @@ const handleCallMLBalancer = async () => {
                 </TouchableOpacity>
               )}
             </View>
-            
+
             {loadingJovens ? (
               <ActivityIndicator size="large" color={colors.primary} style={{ marginVertical: 30 }} />
             ) : (
@@ -798,40 +715,10 @@ const handleCallMLBalancer = async () => {
         </View>
       </Modal>
 
-      <Modal visible={modalAtividadeVisible} animationType="slide" transparent={true}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.atividadeContent, { backgroundColor: colors.card }]}>
-            <View style={styles.atividadeHeaderIcon}>
-              <Ionicons name="bulb" size={40} color="#FFF" /> 
-            </View>
-            <Text style={styles.tagIA}>RECOMENDAÇÃO INTELIGENTE</Text>
-            <Text style={[styles.atividadeTitulo, { color: colors.text }]}>
-              {atividadeRecomendada?.nome}
-            </Text>
-            <View style={[styles.badgeRamoContainer, { backgroundColor: colors.border + '30' }]}>
-              <Text style={{ color: colors.text, fontSize: 12, fontWeight: 'bold' }}>
-                Ramo: {atividadeRecomendada?.ramo}
-              </Text>
-            </View>
-            <ScrollView style={styles.scrollArea} showsVerticalScrollIndicator={false}>
-              <Text style={[styles.atividadeDescricao, { color: colors.text }]}>
-                {atividadeRecomendada?.descricao}
-              </Text>
-            </ScrollView>
-            <TouchableOpacity 
-              onPress={() => setModalAtividadeVisible(false)} 
-              style={[styles.btnOkAtividade, { backgroundColor: colors.primary }]}
-            >
-              <Text style={styles.btnOkText}>ENTENDIDO</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
       <Modal visible={alertVisible} animationType="fade" transparent={true}>
         <View style={styles.modalOverlay}>
           <View style={[styles.alertContent, { backgroundColor: colors.card }]}>
-            
+
             <View style={{ marginBottom: 15 }}>
               <Ionicons name={alertConfig.icon} size={60} color={alertConfig.color} />
             </View>
@@ -839,27 +726,27 @@ const handleCallMLBalancer = async () => {
             <Text style={[styles.alertTitle, { color: colors.text }]}>
               {alertConfig.title}
             </Text>
-            
+
             <Text style={[styles.alertText, { color: colors.text }]}>{alertMsg}</Text>
-            
+
             <View style={{ width: '100%' }}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => {
                   setAlertVisible(false);
                   if (alertConfig.action) {
-                    setTimeout(() => alertConfig.action(), 100); 
+                    setTimeout(() => alertConfig.action(), 100);
                   }
-                }} 
+                }}
                 style={[styles.btnOk, { backgroundColor: alertConfig.color }]}
               >
                 <Text style={styles.btnOkText}>
                   {alertConfig.btnText}
                 </Text>
               </TouchableOpacity>
-              
+
               {alertConfig.isConfirm && (
-                <TouchableOpacity 
-                  onPress={() => setAlertVisible(false)} 
+                <TouchableOpacity
+                  onPress={() => setAlertVisible(false)}
                   style={[styles.btnCancelarAlert, { borderColor: colors.border }]}
                 >
                   <Text style={[styles.btnCancelarAlertText, { color: colors.text }]}>CANCELAR</Text>
@@ -890,14 +777,11 @@ const styles = StyleSheet.create({
   miniBadgeSkill: { flexDirection: 'row', alignItems: 'center', marginRight: 12, marginTop: 4 },
   miniSkillText: { fontSize: 11 },
   stickyFooter: { paddingVertical: 12, borderTopWidth: 0.5, borderColor: '#ccc' },
-  btnAtividade: { height: 48, borderRadius: 8, borderWidth: 1.5, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
-  btnAtividadeText: { fontWeight: '800', fontSize: 14, letterSpacing: 0.5 },
   btnSave: { height: 50, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
   btnSaveText: { color: '#FFF', fontWeight: 'bold', fontSize: 15 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 },
   modalContent: { width: '100%', maxHeight: '82%', borderRadius: 16, padding: 20, paddingTop: 10 },
 
-  // ── Cabeçalho e busca do modal de seleção de jovens ──────────────────────
   modalHandle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', opacity: 0.4, marginBottom: 14 },
   modalHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 14 },
   modalTitle: { fontSize: 18, fontWeight: 'bold' },
@@ -912,19 +796,11 @@ const styles = StyleSheet.create({
   pillIdade: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, marginTop: 2 },
   emptyState: { alignItems: 'center', paddingVertical: 40, paddingHorizontal: 20 },
 
-  atividadeContent: { width: '100%', height: '75%', borderRadius: 16, padding: 20, alignItems: 'center' },
-  atividadeHeaderIcon: { width: 70, height: 70, borderRadius: 35, backgroundColor: OURO_DETALHE, justifyContent: 'center', alignItems: 'center', marginTop: -45, elevation: 5 },
-  tagIA: { fontSize: 11, fontWeight: 'bold', color: OURO_DETALHE, marginTop: 12, letterSpacing: 1 },
-  atividadeTitulo: { fontSize: 22, fontWeight: 'bold', marginVertical: 10, textAlign: 'center' },
-  badgeRamoContainer: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, marginBottom: 10 },
-  scrollArea: { flex: 1, width: '100%', marginVertical: 10 },
-  atividadeDescricao: { fontSize: 15, lineHeight: 22, textAlign: 'center', paddingHorizontal: 10 },
-  btnOkAtividade: { width: '100%', height: 48, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginTop: 10 },
-  btnOkText: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
   alertContent: { width: '85%', borderRadius: 14, padding: 22, alignItems: 'center', elevation: 10 },
   alertTitle: { fontSize: 19, fontWeight: 'bold', marginBottom: 10, textAlign: 'center' },
   alertText: { fontSize: 14, textAlign: 'center', marginBottom: 22, lineHeight: 20, opacity: 0.8 },
   btnOk: { width: '100%', height: 46, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
+  btnOkText: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
   btnCancelarAlert: { width: '100%', height: 46, borderRadius: 8, borderWidth: 1, justifyContent: 'center', alignItems: 'center', marginTop: 10 },
   btnCancelarAlertText: { fontWeight: '700', fontSize: 14 }
 });

@@ -14,7 +14,7 @@ export default function ProfileAdmin() {
   const [loading, setLoading] = useState(true);
   const [dadosChefe, setDadosChefe] = useState(null);
 
-  const BASE_URL = 'https://grupo-escoteiro.onrender.com';
+  const BASE_URL = 'https://grupo-escoteiro-ia-gefi-docker-teste.onrender.com';
 
   useEffect(() => {
     const carregarDadosDoChefe = async () => {

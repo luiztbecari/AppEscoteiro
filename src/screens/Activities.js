@@ -15,7 +15,7 @@ import { ThemeContext } from '../context/ThemeContext';
 import { styles as globalStyles } from '../styles/styles';
 
 const OURO_DETALHE = '#DAA520';
-const BASE_URL = 'https://grupo-escoteiro.onrender.com';
+const BASE_URL = 'https://grupo-escoteiro-ia-gefi-docker-teste.onrender.com';
 
 // A API pode devolver os campos com outros nomes; tentamos os mais comuns
 const obterNome = (item) => {
@@ -134,7 +134,7 @@ export default function Activities({ navigation }) {
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <View style={{ flex: 1, paddingRight: 8 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
-              <Text style={styles.nomeAtividade}>{obterNome(item) || 'Atividade sem nome'}</Text>
+              <Text style={styles.nomeAtividade} numberOfLines={2}>{obterNome(item) || 'Atividade sem nome'}</Text>
               <Text style={styles.dataAtividade}>• {formatarDataExibicao(dataItem) || 'Sem data'}</Text>
               {ehHoje && (
                 <View style={styles.badgeHoje}>
@@ -143,7 +143,11 @@ export default function Activities({ navigation }) {
               )}
             </View>
 
-            {descricao !== '' && <Text style={styles.descricaoAtividade}>{descricao}</Text>}
+            {descricao !== '' && (
+              <Text style={styles.descricaoAtividade} numberOfLines={3} ellipsizeMode="tail">
+                {descricao}
+              </Text>
+            )}
           </View>
 
           <TouchableOpacity

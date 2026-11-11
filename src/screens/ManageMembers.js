@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, Alert, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, Alert, TextInput, ScrollView, StyleSheet } from 'react-native';
 import { useState, useContext, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { ThemeContext } from '../context/ThemeContext';
@@ -6,7 +6,6 @@ import { styles as globalStyles } from '../styles/styles';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 
-const OURO_DETALHE = '#DAA520';
 const VERDE_SKILL = '#2E8B57';
 
 const calcularIdadeApartirDeData = (dataNascimento) => {
@@ -31,13 +30,27 @@ const calcularIdadeApartirDeData = (dataNascimento) => {
   }
 };
 
+// Diz se o jovem pertence ao ramo escolhido no filtro (por id ou pelo nome do ramo)
+const pertenceAoRamo = (jovem, ramo) => {
+  if (jovem.branch_id && String(jovem.branch_id).trim() === String(ramo.id)) return true;
+
+  const nomeRamo = (ramo.name || ramo.nome || '').toLowerCase().trim();
+  const nomeDoJovem = (jovem.branch_name || jovem.ramo || '').toLowerCase().trim();
+  return nomeDoJovem !== '' && (nomeDoJovem === nomeRamo || nomeDoJovem === `ramo ${nomeRamo}`);
+};
+
 export default function ManageMembers({ navigation, route }) {
   const { colors } = useContext(ThemeContext);
   const [members, setMembers] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
 
-  const BASE_URL = 'https://grupo-escoteiro.onrender.com';
+  // Filtro por ramo (só aparece para presidente/admin)
+  const [ehAdmin, setEhAdmin] = useState(false);
+  const [ramos, setRamos] = useState([]);
+  const [ramoSelecionado, setRamoSelecionado] = useState(null);
+
+  const BASE_URL = 'https://grupo-escoteiro-ia-gefi-docker-teste.onrender.com';
 
   const carregarMembros = async () => {
     try {
@@ -50,7 +63,8 @@ export default function ManageMembers({ navigation, route }) {
       }
 
       const cargoNormalizado = cargoUsuario ? cargoUsuario.toLowerCase().trim() : '';
-      const ehAdmin = cargoNormalizado === 'admin' || cargoNormalizado === 'administrador' || cargoNormalizado === 'presidente';
+      const admin = cargoNormalizado === 'admin' || cargoNormalizado === 'administrador' || cargoNormalizado === 'presidente';
+      setEhAdmin(admin);
 
       const response = await fetch(`${BASE_URL}/members`, {
         method: 'GET',
@@ -68,8 +82,17 @@ export default function ManageMembers({ navigation, route }) {
       const data = await response.json();
       const listaCompleta = Array.isArray(data) ? data : (data.members || data.data || []);
 
-      if (ehAdmin) {
-        console.log(`👑 [MANAGE MEMBERS] Modo Administrador: Exibindo todos os membros.`);
+      if (admin) {
+        // Presidente vê todos os membros e pode filtrar pelo ramo
+        try {
+          const ramosRes = await fetch(`${BASE_URL}/branches`, {
+            headers: { 'Authorization': `Bearer ${tokenChefe}` }
+          });
+          if (ramosRes.ok) setRamos(await ramosRes.json());
+        } catch (err) {
+          console.log("Erro ao carregar ramos:", err);
+        }
+
         setMembers(listaCompleta);
       } else {
         const storageBranchId = await AsyncStorage.getItem('@branch_id');
@@ -82,8 +105,6 @@ export default function ManageMembers({ navigation, route }) {
           if (branchIdStr === "2") nomeDoRamoAlvo = "Lobinho";
           if (branchIdStr === "3") nomeDoRamoAlvo = "Sênior";
           if (branchIdStr === "4") nomeDoRamoAlvo = "Pioneiro";
-
-          console.log(`🔍 [MANAGE MEMBERS] Modo Chefe: Filtrando estritamente pelo ramo ID ${branchIdStr} (${nomeDoRamoAlvo})`);
 
           const listaFiltrada = listaCompleta.filter(jovem => {
             if (jovem.branch_id && jovem.branch_id.toString().trim() === branchIdStr) {
@@ -125,7 +146,9 @@ export default function ManageMembers({ navigation, route }) {
 
   const filteredMembers = members.filter(m => {
     const nomeMembro = m.nome || m.name || '';
-    return nomeMembro.toLowerCase().includes(search.toLowerCase());
+    const passaNaBusca = nomeMembro.toLowerCase().includes(search.toLowerCase());
+    const passaNoRamo = ramoSelecionado === null || pertenceAoRamo(m, ramoSelecionado);
+    return passaNaBusca && passaNoRamo;
   });
 
   const renderSkillsRow = (item) => {
@@ -189,6 +212,33 @@ export default function ManageMembers({ navigation, route }) {
         value={search}
         onChangeText={setSearch}
       />
+
+      {/* Filtro por ramo: só o presidente/admin enxerga */}
+      {ehAdmin && (
+        <View style={styles.filtroContainer}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtroConteudo}>
+          <TouchableOpacity
+            style={[styles.botaoFiltro, { backgroundColor: ramoSelecionado === null ? colors.primary : colors.card }]}
+            onPress={() => setRamoSelecionado(null)}
+          >
+            <Text style={[styles.textoFiltro, { color: ramoSelecionado === null ? '#FFF' : colors.text, opacity: ramoSelecionado === null ? 1 : 0.7 }]}>Todos</Text>
+          </TouchableOpacity>
+
+          {ramos.map(r => {
+            const ativo = ramoSelecionado?.id === r.id;
+            return (
+              <TouchableOpacity
+                key={r.id}
+                style={[styles.botaoFiltro, { backgroundColor: ativo ? colors.primary : colors.card }]}
+                onPress={() => setRamoSelecionado(r)}
+              >
+                <Text style={[styles.textoFiltro, { color: ativo ? '#FFF' : colors.text, opacity: ativo ? 1 : 0.7 }]}>{r.name || r.nome}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+        </View>
+      )}
 
       <TouchableOpacity
         style={[globalStyles.button, { backgroundColor: colors.primary, marginBottom: 20, width: '100%', height: 50, justifyContent: 'center', alignItems: 'center', borderRadius: 10 }]}
@@ -266,3 +316,11 @@ export default function ManageMembers({ navigation, route }) {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  // altura fixa: sem ela o filtro horizontal é espremido pela lista e os botões ficam cortados
+  filtroContainer: { height: 38, marginBottom: 15 },
+  filtroConteudo: { alignItems: 'center' },
+  botaoFiltro: { paddingHorizontal: 16, borderRadius: 20, marginRight: 8, height: 38, justifyContent: 'center' },
+  textoFiltro: { fontWeight: '600' }
+});

@@ -26,7 +26,7 @@ export default function CreateMember({ navigation }) {
   const [tecnico, setTecnico] = useState('1');
   const [experiencia, setExperiencia] = useState('1');
 
-  const BASE_URL = 'https://grupo-escoteiro.onrender.com';
+  const BASE_URL = 'https://grupo-escoteiro-ia-gefi-docker-teste.onrender.com';
 
   useEffect(() => {
     const obterRamoDoChefe = async () => {
@@ -83,10 +83,12 @@ export default function CreateMember({ navigation }) {
     return idade;
   };
 
+  // Ramos pela idade: Lobinho 6-10, Escoteiro 11-14, Sênior 15-17, Pioneiro 18-23
   const obterRamoPelaIdade = (idade) => {
     if (idade >= 6 && idade <= 10) return { id: 2, nome: 'Lobinho' };
     if (idade >= 11 && idade <= 14) return { id: 1, nome: 'Escoteiro' };
-    if (idade >= 15) return { id: 3, nome: 'Sênior' };
+    if (idade >= 15 && idade <= 17) return { id: 3, nome: 'Sênior' };
+    if (idade >= 18 && idade <= 23) return { id: 4, nome: 'Pioneiro' };
     return null;
   };
 
@@ -118,14 +120,14 @@ export default function CreateMember({ navigation }) {
     const ramoDestino = obterRamoPelaIdade(idade);
 
     if (!ramoDestino) {
-      setMensagemModal(`Idade inválida (${idade} anos). Só é possível cadastrar membros a partir dos 6 anos de idade.`);
+      setMensagemModal(`Idade inválida (${idade} anos). Só é possível cadastrar membros de 6 a 23 anos de idade.`);
       setModalSucesso(false);
       setModalVisible(true);
       return;
     }
 
     if (chefeBranchId !== "0" && parseInt(chefeBranchId) !== ramoDestino.id) {
-      const nomesRamos = { 1: "Lobinho", 2: "Escoteiro", 3: "Sênior", 4: "Pioneiro" };
+      const nomesRamos = { 1: "Escoteiro", 2: "Lobinho", 3: "Sênior", 4: "Pioneiro" };
       const nomeRamoChefe = nomesRamos[parseInt(chefeBranchId)] || "Desconhecido";
       
       setMensagemModal(`Acesso negado! O jovem possui ${idade} anos (pertence ao Ramo ${ramoDestino.nome}), mas você só possui permissão para cadastrar no Ramo ${nomeRamoChefe}.`);

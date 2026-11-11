@@ -31,7 +31,7 @@ export default function CreateLeader({ navigation }) {
 
   const [customAlert, setCustomAlert] = useState({ visible: false, title: '', message: '', onClose: null });
 
-  const BASE_URL = 'https://grupo-escoteiro.onrender.com';
+  const BASE_URL = 'https://grupo-escoteiro-ia-gefi-docker-teste.onrender.com';
 
   const carregarRamosDoBanco = async () => {
     try {

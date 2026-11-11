@@ -12,9 +12,6 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemeContext } from '../context/ThemeContext';
 
-const VERDE_ESCURO = '#1A4524';
-const OURO_DETALHE = '#DAA520';
-
 export default function HomeAdmin({ navigation, route }) {
   const { colors } = useContext(ThemeContext);
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -28,7 +25,7 @@ export default function HomeAdmin({ navigation, route }) {
   const [ramoSelecionado, setRamoSelecionado] = useState(null);
   const [loadingChefes, setLoadingChefes] = useState(false);
 
-  const BASE_URL = 'https://grupo-escoteiro.onrender.com';
+  const BASE_URL = 'https://grupo-escoteiro-ia-gefi-docker-teste.onrender.com';
 
   const carregarDadosIniciais = async () => {
     try {
@@ -82,86 +79,109 @@ export default function HomeAdmin({ navigation, route }) {
   });
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.cardPerfil}>
-        <View style={styles.avatarCircular}><Ionicons name="person" size={40} color={VERDE_ESCURO} /></View>
-        <View style={{ marginLeft: 15, flex: 1 }}>
-          <Text style={styles.nomeUser}>{dadosAdmin.name}</Text>
-          <Text style={styles.subtitulo}>{dadosAdmin.role} • Sempre Alerta!</Text>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <View style={styles.card}>
+        <View style={styles.linha}>
+          <View style={styles.avatar}>
+            <Ionicons name="person" size={28} color={colors.primary} />
+          </View>
+          <View style={{ flex: 1, paddingHorizontal: 12 }}>
+            <Text style={styles.nome}>{dadosAdmin.name}</Text>
+            <Text style={styles.subtitulo}>{dadosAdmin.role} • Sempre Alerta!</Text>
+          </View>
+          <Ionicons name="shield-checkmark" size={26} color={colors.primary} />
         </View>
-        <Ionicons name="shield-checkmark" size={30} color={OURO_DETALHE} />
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Painel Administrativo</Text>
-        {loading ? <ActivityIndicator color={colors.primary} size="large" /> : (
-          <>
-            <TouchableOpacity style={styles.mainAdminButton} onPress={() => navigation.navigate('CreateLeader', { user: adminLogado })}>
-              <View style={styles.mainButtonContent}>
-                <View style={styles.mainIconBox}><Ionicons name="person-add" size={28} color="#FFF" /></View>
-                <View style={{ flex: 1, marginLeft: 15 }}>
-                  <Text style={styles.mainButtonText}>Cadastrar Novo Chefe</Text>
-                  <Text style={styles.mainButtonSubtext}>Criar acessos e ramos de atuação</Text>
-                </View>
+      <Text style={styles.sectionTitle}>Painel Administrativo</Text>
+      {loading ? <ActivityIndicator color={colors.primary} size="large" /> : (
+        <>
+          <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('CreateLeader', { user: adminLogado })}>
+            <View style={styles.linha}>
+              <View style={styles.avatar}>
+                <Ionicons name="person-add" size={26} color={colors.primary} />
               </View>
+              <View style={{ flex: 1, paddingHorizontal: 12 }}>
+                <Text style={styles.nome}>Cadastrar Novo Chefe</Text>
+                <Text style={styles.subtitulo}>Criar acessos e ramos de atuação</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.border} />
+            </View>
+          </TouchableOpacity>
+
+          <Text style={[styles.sectionTitle, { marginTop: 10 }]}>Chefes de Seção</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtroContainer}>
+            <TouchableOpacity style={[styles.botaoFiltro, ramoSelecionado === null && styles.botaoFiltroAtivo]} onPress={() => setRamoSelecionado(null)}>
+              <Text style={[styles.textoFiltro, ramoSelecionado === null && styles.textoFiltroAtivo]}>Todos</Text>
             </TouchableOpacity>
-
-            <Text style={[styles.sectionTitle, { marginTop: 25, marginBottom: 10 }]}>Chefes de Seção</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtroContainer}>
-              <TouchableOpacity style={[styles.botaoFiltro, ramoSelecionado === null && styles.botaoFiltroAtivo]} onPress={() => setRamoSelecionado(null)}>
-                <Text style={[styles.textoFiltro, ramoSelecionado === null && styles.textoFiltroAtivo]}>Todos</Text>
+            {ramos.map(r => (
+              <TouchableOpacity key={r.id} style={[styles.botaoFiltro, ramoSelecionado?.id === r.id && styles.botaoFiltroAtivo]} onPress={() => setRamoSelecionado(r)}>
+                <Text style={[styles.textoFiltro, ramoSelecionado?.id === r.id && styles.textoFiltroAtivo]}>{r.name || r.nome}</Text>
               </TouchableOpacity>
-              {ramos.map(r => (
-                <TouchableOpacity key={r.id} style={[styles.botaoFiltro, ramoSelecionado?.id === r.id && styles.botaoFiltroAtivo]} onPress={() => setRamoSelecionado(r)}>
-                  <Text style={[styles.textoFiltro, ramoSelecionado?.id === r.id && styles.textoFiltroAtivo]}>{r.name || r.nome}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+            ))}
+          </ScrollView>
 
-            {loadingChefes ? <ActivityIndicator color={colors.primary} size="small" /> : (
-              chefesFiltrados.map((chefe) => (
-                <TouchableOpacity 
-                  key={chefe.id} 
-                  style={styles.cardChefe} 
-                  onPress={() => navigation.navigate('ProfileAdmin', { chefeId: chefe.id, chefeNome: chefe.name || chefe.nome })}
-                >
-                  <View style={styles.avatarChefeMini}><Ionicons name="person" size={20} color={colors.primary} /></View>
-                  <View style={{ flex: 1, marginLeft: 12 }}>
-                    <Text style={styles.nomeChefeLista}>{chefe.name || chefe.nome}</Text>
-                    <Text style={styles.ramoChefeLista}>{chefe.branch_name || "Ramo não associado"}</Text>
+          {loadingChefes ? <ActivityIndicator color={colors.primary} size="small" /> : (
+            chefesFiltrados.map((chefe) => (
+              <TouchableOpacity 
+                key={chefe.id} 
+                style={styles.card} 
+                onPress={() => navigation.navigate('ProfileAdmin', { chefeId: chefe.id, chefeNome: chefe.name || chefe.nome })}
+              >
+                <View style={styles.linha}>
+                  <View style={styles.avatar}>
+                    <Ionicons name="person" size={24} color={colors.primary} />
+                  </View>
+                  <View style={{ flex: 1, paddingHorizontal: 12 }}>
+                    <Text style={styles.nome}>{chefe.name || chefe.nome}</Text>
+                    <Text style={styles.subtitulo}>{chefe.branch_name || "Ramo não associado"}</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={20} color={colors.border} />
-                </TouchableOpacity>
-              ))
-            )}
-            {!loadingChefes && chefesFiltrados.length === 0 && <Text style={styles.textoVazio}>Nenhum chefe ativo neste ramo.</Text>}
-          </>
-        )}
-      </View>
+                </View>
+              </TouchableOpacity>
+            ))
+          )}
+          {!loadingChefes && chefesFiltrados.length === 0 && <Text style={styles.textoVazio}>Nenhum chefe ativo neste ramo.</Text>}
+        </>
+      )}
+
+      <View style={{ height: 35 }} />
     </ScrollView>
   );
 }
 
 const createStyles = (colors) => StyleSheet.create({
-  container: { flex: 1, padding: 15, backgroundColor: colors.background },
-  cardPerfil: { flexDirection: 'row', alignItems: 'center', padding: 20, borderRadius: 15, backgroundColor: VERDE_ESCURO, elevation: 5, marginTop: 10 },
-  avatarCircular: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#FFF', justifyContent: 'center', alignItems: 'center' },
-  nomeUser: { color: '#FFF', fontSize: 18, fontWeight: 'bold' },
-  subtitulo: { color: OURO_DETALHE, fontSize: 13, fontWeight: '600', textTransform: 'capitalize' },
-  sectionTitle: { fontSize: 22, fontWeight: '800', color: colors.primary, marginBottom: 15 },
-  mainAdminButton: { backgroundColor: colors.card, borderRadius: 16, padding: 20, elevation: 4, marginBottom: 12, borderLeftWidth: 6, borderLeftColor: colors.primary },
-  mainButtonContent: { flexDirection: 'row', alignItems: 'center' },
-  mainIconBox: { width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.primary },
-  mainButtonText: { fontSize: 18, fontWeight: 'bold', color: colors.primary },
-  mainButtonSubtext: { fontSize: 12, color: colors.text, opacity: 0.6 },
+  container: { flex: 1, backgroundColor: colors.background, padding: 20 },
+
+  card: {
+    backgroundColor: colors.card,
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 15,
+    borderLeftWidth: 6,
+    borderLeftColor: colors.primary,
+    elevation: 3
+  },
+  linha: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primary + '15',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  nome: { fontSize: 17, fontWeight: 'bold', color: colors.text },
+  subtitulo: { color: colors.text, opacity: 0.6, marginTop: 4, fontSize: 13, textTransform: 'capitalize' },
+
+  sectionTitle: { fontSize: 24, fontWeight: 'bold', color: colors.primary, marginBottom: 15 },
+
   filtroContainer: { flexDirection: 'row', marginBottom: 15 },
   botaoFiltro: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: colors.card, marginRight: 8, height: 38 },
   botaoFiltroAtivo: { backgroundColor: colors.primary },
   textoFiltro: { color: colors.text, opacity: 0.7, fontWeight: '600' },
   textoFiltroAtivo: { color: '#FFF', opacity: 1 },
-  cardChefe: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, padding: 15, borderRadius: 12, marginBottom: 8, elevation: 1 },
-  avatarChefeMini: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.primary + '20', justifyContent: 'center', alignItems: 'center' },
-  nomeChefeLista: { fontSize: 15, fontWeight: 'bold', color: colors.text },
-  ramoChefeLista: { fontSize: 12, color: colors.text, opacity: 0.6 },
+
   textoVazio: { textAlign: 'center', color: colors.text, opacity: 0.5, marginTop: 20 }
 });

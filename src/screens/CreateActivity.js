@@ -31,9 +31,14 @@ export default function CreateActivity({ navigation, route }) {
   const [descricao, setDescricao] = useState(atividadeEdit?.description || '');
   const [loading, setLoading] = useState(false);
   const [excluindo, setExcluindo] = useState(false);
-  const [sugerindo, setSugerindo] = useState(false);
 
-  const BASE_URL = 'https://grupo-escoteiro.onrender.com';
+  // Sugestões da IA
+  const [sugerindo, setSugerindo] = useState(false);
+  const [sugestoes, setSugestoes] = useState([]);
+  const [temaUsado, setTemaUsado] = useState('');
+  const [modalSugestoes, setModalSugestoes] = useState(false);
+
+  const BASE_URL = 'https://grupo-escoteiro-ia-gefi-docker-teste.onrender.com';
 
   // Formata a digitação como DD/MM/AAAA conforme o usuário digita números
   const formatarDataBR = (texto) => {
@@ -71,7 +76,7 @@ export default function CreateActivity({ navigation, route }) {
     setModalVisible(true);
   };
 
-  // Pede ao backend uma sugestão de atividade feita pela IA (usa o campo Nome como tema)
+  // Pede ao backend sugestões de atividade feitas pela IA (usa o campo Nome como tema)
   const handleSugerirIA = async () => {
     if (sugerindo || loading || excluindo) return;
 
@@ -79,6 +84,10 @@ export default function CreateActivity({ navigation, route }) {
       mostrarMensagem("Digite um tema no campo Nome (mínimo 3 letras) para a IA sugerir.");
       return;
     }
+
+    // cancela se o servidor demorar mais de 60 segundos
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 60000);
 
     try {
       setSugerindo(true);
@@ -92,27 +101,49 @@ export default function CreateActivity({ navigation, route }) {
         return;
       }
 
+      const tema = nome.trim();
+
       const response = await fetch(`${BASE_URL}/activities/suggestions`, {
         method: 'POST',
+        signal: controller.signal,
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${tokenChefe}`
         },
-        body: JSON.stringify({ branch_id: branchId, tema: nome.trim() })
+        body: JSON.stringify({ branch_id: branchId, tema })
       });
 
-      const json = await response.json();
-      if (!response.ok) throw new Error(json.error || "Não foi possível gerar a sugestão.");
+      // lê como texto, porque erros do proxy podem vir sem JSON
+      const texto = await response.text();
+      let json = {};
+      try { json = JSON.parse(texto); } catch {}
 
-      const sugestao = json.atividades[0];
-      setNome(sugestao.title);
-      setDescricao(sugestao.description);
+      if (!response.ok) throw new Error(json.error || `Erro ${response.status} ao gerar a sugestão.`);
+
+      const lista = Array.isArray(json.atividades) ? json.atividades : [];
+      if (lista.length === 0) throw new Error("A IA não retornou sugestões.");
+
+      setTemaUsado(tema);
+      setSugestoes(lista);
+      setModalSugestoes(true);
     } catch (error) {
-      mostrarMensagem(error.message);
+      if (error.name === 'AbortError') {
+        mostrarMensagem("A IA demorou demais para responder. Tente novamente em instantes.");
+      } else {
+        mostrarMensagem(error.message);
+      }
     } finally {
+      clearTimeout(timer);
       setSugerindo(false);
     }
+  };
+
+  // Preenche nome e descrição com a sugestão escolhida
+  const escolherSugestao = (item) => {
+    setNome(item.title);
+    setDescricao(item.description);
+    setModalSugestoes(false);
   };
 
   const handleSalvar = async () => {
@@ -288,6 +319,33 @@ export default function CreateActivity({ navigation, route }) {
         </View>
       </ScrollView>
 
+      {/* Escolha entre as sugestões da IA */}
+      <Modal animationType="fade" transparent={true} visible={modalSugestoes} onRequestClose={() => setModalSugestoes(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalSugestoes, { backgroundColor: colors.card }]}>
+            <Text style={[styles.sugestoesTitulo, { color: colors.text }]}>Sugestões da IA</Text>
+            <Text style={[styles.sugestoesTema, { color: colors.text }]}>Tema: {temaUsado}</Text>
+
+            <ScrollView showsVerticalScrollIndicator={false} style={{ width: '100%' }}>
+              {sugestoes.map((item, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[styles.cardSugestao, { backgroundColor: colors.background, borderLeftColor: colors.primary }]}
+                  onPress={() => escolherSugestao(item)}
+                >
+                  <Text style={[styles.cardSugestaoTitulo, { color: colors.text }]}>{item.title}</Text>
+                  <Text style={[styles.cardSugestaoDescricao, { color: colors.text }]} numberOfLines={4}>{item.description}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <TouchableOpacity style={[styles.btnCancelarSugestoes, { backgroundColor: '#777' }]} onPress={() => setModalSugestoes(false)}>
+              <Text style={styles.btnSalvarText}>CANCELAR</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       <Modal animationType="fade" transparent={true} visible={modalVisible} onRequestClose={() => { setModalVisible(false); setModalAcao(null); }}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
@@ -349,5 +407,13 @@ const styles = StyleSheet.create({
   modalContent: { width: '100%', maxWidth: 400, padding: 25, borderRadius: 25, alignItems: 'center', elevation: 10 },
   modalText: { fontSize: 18, fontWeight: '600', marginBottom: 25, textAlign: 'center' },
   btnModal: { paddingVertical: 14, paddingHorizontal: 40, borderRadius: 15, alignItems: 'center' },
-  btnModalLinha: { flex: 1, paddingVertical: 14, borderRadius: 15, alignItems: 'center', justifyContent: 'center' }
+  btnModalLinha: { flex: 1, paddingVertical: 14, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+
+  modalSugestoes: { width: '100%', maxWidth: 420, maxHeight: '80%', padding: 20, borderRadius: 20, alignItems: 'center', elevation: 10 },
+  sugestoesTitulo: { fontSize: 20, fontWeight: 'bold', marginBottom: 4 },
+  sugestoesTema: { fontSize: 13, opacity: 0.6, marginBottom: 15 },
+  cardSugestao: { padding: 14, borderRadius: 12, marginBottom: 10, borderLeftWidth: 6 },
+  cardSugestaoTitulo: { fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
+  cardSugestaoDescricao: { fontSize: 13, opacity: 0.7 },
+  btnCancelarSugestoes: { width: '100%', height: 46, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginTop: 10 }
 });

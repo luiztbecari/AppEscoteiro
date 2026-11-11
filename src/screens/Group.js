@@ -15,7 +15,7 @@ export default function Group({ navigation, route }) {
   const idChefeFiltro = route.params?.id_chefe_filtro;
   const nomeChefeFiltro = route.params?.nome_chefe_filtro;
   const [userBranchId, setUserBranchId] = useState(null);
-  const BASE_URL = 'https://grupo-escoteiro.onrender.com';
+  const BASE_URL = 'https://grupo-escoteiro-ia-gefi-docker-teste.onrender.com';
 
 const carregarPatrulhas = async () => {
     try {

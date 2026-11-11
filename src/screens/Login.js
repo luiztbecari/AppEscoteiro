@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ThemeContext } from '../context/ThemeContext';
+
+const BASE_URL = 'https://grupo-escoteiro-ia-gefi-docker-teste.onrender.com';
 
 function decodificarJWT(token) {
   try {
@@ -18,6 +21,7 @@ export default function Login({ navigation }) {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [loading, setLoading] = useState(false);
+  const { carregarTemaDoUsuario } = useContext(ThemeContext);
 
   const handleLogin = async () => {
     console.log('BOTAO CLICADO');
@@ -29,7 +33,7 @@ export default function Login({ navigation }) {
     setLoading(true);
 
     try { 
-      const response = await fetch('https://grupo-escoteiro.onrender.com/auth/login', {
+      const response = await fetch(`${BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email, password: senha }),
@@ -38,11 +42,14 @@ export default function Login({ navigation }) {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'E-mail ou senha incorretos.');
+        throw new Error(data.message || data.error || 'E-mail ou senha incorretos.');
       }
 
       const { user, token } = data; 
       const tokenSalvar = token || user?.token; 
+
+      // Limpa o que ficou salvo do usuário anterior (ramo, cargo e token)
+      await AsyncStorage.multiRemove(['@token_chefe', '@branch_id', '@user_role']);
       
       if (tokenSalvar) {
         await AsyncStorage.setItem('@token_chefe', tokenSalvar);
@@ -50,9 +57,11 @@ export default function Login({ navigation }) {
 
       let branchIdSalvar = null;
       let cargoToken = null;
+      let payloadToken = null;
 
       if (tokenSalvar) {
         const tokenDecodificado = decodificarJWT(tokenSalvar);
+        payloadToken = tokenDecodificado;
         if (tokenDecodificado) {
           branchIdSalvar = tokenDecodificado.branch_id;
           cargoToken = tokenDecodificado.global_role || tokenDecodificado.branch_role;
@@ -82,6 +91,10 @@ export default function Login({ navigation }) {
       }
 
       await AsyncStorage.setItem('@user_role', cargo);
+
+      // Carrega o tema salvo desta conta (modo escuro) já no login
+      const idUsuario = user?.id ?? user?.user?.id ?? payloadToken?.id ?? payloadToken?.user_id ?? payloadToken?.sub;
+      await carregarTemaDoUsuario(idUsuario);
 
       const usuarioComEmail = { 
         ...user, 

@@ -24,7 +24,7 @@ export default function EditMemberSkills({ route, navigation }) {
   
   const [isAdmin, setIsAdmin] = useState(false);
 
-  const BASE_URL = 'https://grupo-escoteiro.onrender.com';
+  const BASE_URL = 'https://grupo-escoteiro-ia-gefi-docker-teste.onrender.com';
 
   useEffect(() => {
     setIsAdmin(false);
