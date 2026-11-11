@@ -110,7 +110,7 @@ export default function HomeAdmin({ navigation, route }) {
           </TouchableOpacity>
 
           <Text style={[styles.sectionTitle, { marginTop: 10 }]}>Chefes de Seção</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtroContainer}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtroContainer} contentContainerStyle={styles.filtroConteudo}>
             <TouchableOpacity style={[styles.botaoFiltro, ramoSelecionado === null && styles.botaoFiltroAtivo]} onPress={() => setRamoSelecionado(null)}>
               <Text style={[styles.textoFiltro, ramoSelecionado === null && styles.textoFiltroAtivo]}>Todos</Text>
             </TouchableOpacity>
@@ -177,8 +177,9 @@ const createStyles = (colors) => StyleSheet.create({
 
   sectionTitle: { fontSize: 24, fontWeight: 'bold', color: colors.primary, marginBottom: 15 },
 
-  filtroContainer: { flexDirection: 'row', marginBottom: 15 },
-  botaoFiltro: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: colors.card, marginRight: 8, height: 38 },
+  filtroContainer: { marginBottom: 15 },
+  filtroConteudo: { flexGrow: 1, justifyContent: 'center', alignItems: 'center' },
+  botaoFiltro: { paddingHorizontal: 16, borderRadius: 20, backgroundColor: colors.card, marginRight: 8, height: 38, justifyContent: 'center' },
   botaoFiltroAtivo: { backgroundColor: colors.primary },
   textoFiltro: { color: colors.text, opacity: 0.7, fontWeight: '600' },
   textoFiltroAtivo: { color: '#FFF', opacity: 1 },

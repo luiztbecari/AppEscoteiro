@@ -320,7 +320,7 @@ export default function ManageMembers({ navigation, route }) {
 const styles = StyleSheet.create({
   // altura fixa: sem ela o filtro horizontal é espremido pela lista e os botões ficam cortados
   filtroContainer: { height: 38, marginBottom: 15 },
-  filtroConteudo: { alignItems: 'center' },
+  filtroConteudo: { flexGrow: 1, justifyContent: 'center', alignItems: 'center' },  
   botaoFiltro: { paddingHorizontal: 16, borderRadius: 20, marginRight: 8, height: 38, justifyContent: 'center' },
   textoFiltro: { fontWeight: '600' }
 });
